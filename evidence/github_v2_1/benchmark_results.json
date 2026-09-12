@@ -1,0 +1,133 @@
+{
+  "benchmark_version": "2.1-final-holdout",
+  "generated_utc": "2026-09-11T10:41:35Z",
+  "seed": 20260911,
+  "gate": "RED",
+  "evidence_class": "fresh external public-data historical holdout proxy",
+  "source": "https://snap.stanford.edu/data/git_web_ml.zip",
+  "primary_metric": "paired NDCG@10 delta: Domamutzer augmented learned model vs learned conventional baseline",
+  "protocol": {
+    "leakage_control": "model-training positives and test positives are both removed from the graph used to compute graph features",
+    "baseline_features": [
+      "taste_cosine",
+      "graph_jaccard",
+      "adamic_adar",
+      "preferential_attachment",
+      "degree_ratio"
+    ],
+    "domamutzer_added_features": [
+      "rarity_overlap",
+      "reciprocal_coverage",
+      "shared_evidence"
+    ],
+    "ranking_candidates": 100,
+    "hard_2hop_candidate_target": 70,
+    "bootstrap_reps": 2000
+  },
+  "claim_boundary": "This untouched holdout tests whether the frozen Domamutzer feature family adds signal for historical mutual-follower link ranking on a different attributed social network. It is not causal evidence that showing a recommendation creates a new reciprocal relationship.",
+  "results": [
+    {
+      "dataset": "GitHub developers",
+      "nodes": 37700,
+      "edges": 289003,
+      "context_edges": 231203,
+      "model_positive_edges": 15000,
+      "test_positive_edges": 28900,
+      "binary": {
+        "baseline_learned": {
+          "auc": 0.7878170277777777,
+          "ap": 0.7595137995095984
+        },
+        "domamutzer_augmented": {
+          "auc": 0.784136,
+          "ap": 0.753253671665504
+        },
+        "domamutzer_no_rarity": {
+          "auc": 0.78587775,
+          "ap": 0.7568072535251678
+        },
+        "domamutzer_no_reciprocal": {
+          "auc": 0.7860935555555556,
+          "ap": 0.7570268850567416
+        }
+      },
+      "ranking": {
+        "baseline_learned": {
+          "mrr": 0.11650320371017439,
+          "hit10": 0.21875,
+          "ndcg10": 0.12158178624208647
+        },
+        "domamutzer_augmented": {
+          "mrr": 0.11075566551993608,
+          "hit10": 0.225,
+          "ndcg10": 0.11806101253178454
+        },
+        "domamutzer_no_rarity": {
+          "mrr": 0.11244208626208946,
+          "hit10": 0.22375,
+          "ndcg10": 0.11973262203576035
+        },
+        "domamutzer_no_reciprocal": {
+          "mrr": 0.11173449808258543,
+          "hit10": 0.2225,
+          "ndcg10": 0.11886461873856051
+        },
+        "query_count": 800,
+        "paired_ndcg10_delta": -0.003520773710301904,
+        "paired_ndcg10_ci95": [
+          -0.014448285809409085,
+          0.006784536946681681
+        ]
+      },
+      "weights": {
+        "baseline_learned": {
+          "intercept": -0.01044549108487644,
+          "features": {
+            "taste_cosine": 0.09864056317876255,
+            "graph_jaccard": -0.31204354358726677,
+            "adamic_adar": 0.07673988735931757,
+            "preferential_attachment": 0.4448468418633773,
+            "degree_ratio": 0.03653311524206983
+          }
+        },
+        "domamutzer_augmented": {
+          "intercept": -0.010065989827979438,
+          "features": {
+            "taste_cosine": 0.04814933632247882,
+            "rarity_overlap": 0.0754898103213596,
+            "reciprocal_coverage": 0.07827970937546143,
+            "shared_evidence": -0.0003117575358935491,
+            "graph_jaccard": -0.31797170062935115,
+            "adamic_adar": 0.07407838004728726,
+            "preferential_attachment": 0.44901179962319976,
+            "degree_ratio": 0.02428453197527881
+          }
+        },
+        "domamutzer_no_rarity": {
+          "intercept": -0.01024160198911716,
+          "features": {
+            "taste_cosine": 0.06464832360962507,
+            "reciprocal_coverage": 0.0990119628943292,
+            "shared_evidence": 0.007274116362847479,
+            "graph_jaccard": -0.3156174868006075,
+            "adamic_adar": 0.07501593246361114,
+            "preferential_attachment": 0.4473940420731059,
+            "degree_ratio": 0.0288542581991932
+          }
+        },
+        "domamutzer_no_reciprocal": {
+          "intercept": -0.010182145641148999,
+          "features": {
+            "taste_cosine": 0.06612258910171884,
+            "rarity_overlap": 0.09718111379661791,
+            "shared_evidence": 0.008852588212851276,
+            "graph_jaccard": -0.3156663736478155,
+            "adamic_adar": 0.07502353294719924,
+            "preferential_attachment": 0.44738362475081495,
+            "degree_ratio": 0.029079215333347338
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,59 +1,139 @@
 # Domamutzer
 
-**Reciprocal people-discovery reranking research.**
+### Reciprocal people discovery without throwing away the incumbent ranker
 
-Domamutzer studies a narrow problem for social platforms: given an already eligible candidate set, can a second-stage ranker improve **mutual connection quality** while safely falling back to the incumbent-style baseline when extra signals are unstable?
+Most social discovery systems are good at estimating **who you may already know**. Domamutzer explores a neighboring question:
 
-## Current status
+> among candidates a platform is already willing to show, which introduction has stronger evidence of being valuable **in both directions**?
 
-Domamutzer is **evaluation-stage research technology**. It is not claimed to be production-proven or broadly superior to existing social-platform recommenders. Negative and mixed external results are retained intentionally.
+Domamutzer is an evaluation-stage reciprocal reranking architecture. It does **not** claim to beat Meta, TikTok, Snap, or any production recommender on public proxy data. Its purpose is to make the next experiment—the buyer-controlled directional replay—technically concrete, conservative, and auditable.
 
-| Evaluation | Status | Result |
-|---|---|---|
-| GEMSEC Deezer v2.0 | AMBER | small positive mean NDCG@10 deltas; only Hungary statistically clear |
-| GitHub developers v2.1 | RED | fixed added-feature model did not improve the fresh holdout |
-| Twitch 6-network v2.3 | RED | macro paired NDCG@10 delta -0.000828; pooled 95% CI [-0.002871,+0.001170]; 2/6 positive networks |
-| Private engine v3.0.1 | FINAL evaluation build | baseline-first safe residual + directional reciprocal serving; no broad public-superiority claim |
+## Core idea
 
-The negative holdouts are why the private engine architecture changed rather than hiding unfavorable evidence.
+```mermaid
+flowchart LR
+    A[Existing candidate generator] --> B[Incumbent ranker]
+    B --> C[Candidate set + incumbent score]
+    C --> D1[Directional model A → B]
+    C --> D2[Directional model B → A]
+    D1 --> E[Mutual target]
+    D2 --> E
+    C --> F[Evidence / support gate]
+    E --> G[Trust-region residual]
+    F --> G
+    B --> G
+    G --> H[Constrained final rerank]
+```
 
-## Final architecture
+The system intentionally keeps the incumbent score as a prior. When Domamutzer has weak support, it stays near—or exactly at—the incumbent. When both directional evidence and support are strong, it can make a bounded correction.
 
-The private v3.0.1 engine is baseline-first:
+## The v4 policy
 
-1. learn a conventional query-matched pairwise baseline,
-2. train a bounded residual only on hard/low-margin baseline comparisons,
-3. select residual blend strength with grouped-query cross-validation,
-4. allow `alpha = 0` as an explicit no-augmentation fallback,
-5. keep directional signals separate for real reciprocal outcomes.
+Let:
 
-For partner data with directional labels, the engine can estimate:
+- `s0(A,B)` be the incumbent platform score,
+- `pAB = P(A values/accepts B)`,
+- `pBA = P(B values/accepts A)`.
 
-- `p(A -> B)` — A accepts/values B,
-- `p(B -> A)` — B accepts/values A,
-- mutual score — conservative two-sided fusion.
+A mutual target can be formed with harmonic fusion:
 
-That directional problem is **not identifiable from undirected friendship-link datasets** such as the public proxies above.
+$$m(A,B)=\frac{2p_{AB}p_{BA}}{p_{AB}+p_{BA}}.$$
 
-## Why the public results do not end the project
+Domamutzer then computes an intervention gate `g ∈ [0,1]` from pair support and applies a bounded log-odds move:
 
-GEMSEC, GitHub and Twitch provide historical links and attributes. They do not provide recommendation impressions followed by invite, reciprocal acceptance, reply, D7 continuation, hide, block or report. They are useful for regression/generalization checks, but they are not the product's decision-grade test.
+$$\Delta=\mathrm{clip}(\mathrm{logit}(m)-\mathrm{logit}(s_0),-\delta,+\delta)$$
 
-The next meaningful evaluation is therefore a **buyer-controlled historical replay or shadow test** on a fixed candidate pool with directional outcomes.
+$$s=\sigma(\mathrm{logit}(s_0)+g\Delta).$$
+
+So `g=0` is an exact incumbent fallback, and `δ` limits how aggressively the reranker can intervene.
+
+See [`docs/ALGORITHM.md`](docs/ALGORITHM.md) for the public specification.
+
+## Run the public reference implementation
+
+No external packages are required.
+
+```bash
+python examples/quickstart.py
+python -m unittest discover -s reference -v
+```
+
+The runnable reference is in [`reference/domamutzer_reference.py`](reference/domamutzer_reference.py). It demonstrates reciprocal fusion, support gating, trust-region blending, and constrained window reranking. Private ingestion, feature derivation, training, security, and production-serving code are not public.
 
 ## Evidence history
 
-- [`evidence/gemsec_deezer_v2_0/`](evidence/gemsec_deezer_v2_0/)
-- [`evidence/github_v2_1/`](evidence/github_v2_1/)
-- [`evidence/twitch_v2_3/`](evidence/twitch_v2_3/)
+Earlier Domamutzer versions were tested on three families of public social-network proxies. The negative results are retained because they changed the architecture.
 
-## Requested partner evaluation
+| Evidence | Gate | Result |
+|---|---|---|
+| GEMSEC Deezer | AMBER | small mean top-K gains; only Hungary had a clearly positive CI |
+| GitHub social network | RED | fixed added-feature model failed the fresh holdout |
+| Twitch, 6 networks | RED | macro NDCG@10 delta `-0.000828`; 2/6 networks positive |
 
-Use the platform's existing candidate generator and pseudonymous historical outcomes. Compare the incumbent ranker against Domamutzer under the same candidate pool and predeclare metrics. Useful outcomes include mutual connect/accept, reply or conversation continuation and D7 connection quality, with hide/block/report as safety guardrails.
+Those datasets contain historical links and attributes, **not directional recommendation exposures/outcomes**. They cannot answer the actual product question: does showing A to B create a mutually valuable connection?
 
-## Repository boundary
+The frozen evidence is under [`evidence/`](evidence/), with interpretation in [`docs/EVIDENCE_LEDGER.md`](docs/EVIDENCE_LEDGER.md).
 
-This public repository contains methodology and external evidence only. It does **not** contain the private engine source, production credentials, user data or a production model.
+## What changed because of the failures
+
+The project moved away from “add reciprocal/rarity features and hope they generalize.” The current architecture instead uses:
+
+- directional A→B and B→A outcome models,
+- mutual fusion rather than one-sided relevance,
+- baseline-first intervention,
+- evidence/support gating,
+- bounded log-odds movement,
+- optional incumbent-window constrained reranking,
+- IPS / SNIPS / doubly-robust evaluation for biased historical logs,
+- explicit hide/block/report safety guardrails.
+
+This is a **safer evaluation architecture**, not a retroactive claim that the public RED benchmarks became positive.
+
+## Buyer-controlled evaluation
+
+The decision-grade test is a replay or shadow evaluation on a fixed candidate pool with pseudonymous historical data:
+
+```text
+viewer_id
+candidate_id
+incumbent_score
+logging_propensity        # if available / estimated and documented
+permitted pair features
+impression
+profile_open
+connect_request
+reciprocal_accept
+reply
+D7 continuation
+hide
+block
+report
+```
+
+Compare incumbent vs Domamutzer under the same candidate pool. Predeclare primary metrics and safety guardrails before opening the result. See [`docs/BUYER_REPLAY_PROTOCOL.md`](docs/BUYER_REPLAY_PROTOCOL.md).
+
+## Repository map
+
+```text
+reference/                     runnable public policy reference
+examples/                      tiny executable example
+evidence/                      frozen public proxy results
+docs/ALGORITHM.md              equations and policy semantics
+docs/EVIDENCE_LEDGER.md        what existing experiments prove
+docs/BUYER_REPLAY_PROTOCOL.md  decision-grade next evaluation
+```
+
+## Research context
+
+Domamutzer is informed by reciprocal recommender systems, where both parties' preferences jointly determine success, and by counterfactual/off-policy evaluation for logged recommendation data.
+
+- Yang et al., *Revisiting Reciprocal Recommender Systems: Metrics, Formulation, and Method* (2024): https://arxiv.org/abs/2408.09748
+- Kawamura et al., *Counterfactual Reciprocal Recommender Systems for User-to-User Matching* (2025): https://arxiv.org/abs/2508.01867
+- Palomares et al., *Reciprocal Recommender Systems: Analysis of State-of-Art Literature...* (2020): https://arxiv.org/abs/2007.16120
+
+## Status
+
+**Research/evaluation stage.** The private v4 engine is built for technical replay, not advertised as production-proven. The next meaningful evidence is directional platform data, not another round of tuning on already-open public holdouts.
 
 ## Contact
 
