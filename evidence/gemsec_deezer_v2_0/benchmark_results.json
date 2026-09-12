@@ -1,0 +1,339 @@
+{
+  "benchmark_version": "2.0",
+  "generated_utc": "2026-09-10T13:48:37Z",
+  "seed": 20260910,
+  "gate": "AMBER",
+  "evidence_class": "external public-data historical proxy",
+  "source": "https://snap.stanford.edu/data/gemsec_deezer_dataset.tar.gz",
+  "primary_metric": "paired NDCG@10 delta: Domamutzer augmented learned model vs learned conventional baseline",
+  "protocol": {
+    "leakage_control": "model-training positives and test positives are both removed from the graph used to compute graph features",
+    "baseline_features": [
+      "taste_cosine",
+      "graph_jaccard",
+      "adamic_adar",
+      "preferential_attachment",
+      "degree_ratio"
+    ],
+    "domamutzer_added_features": [
+      "rarity_overlap",
+      "reciprocal_coverage",
+      "shared_evidence"
+    ],
+    "ranking_candidates": 100,
+    "hard_2hop_candidate_target": 70,
+    "bootstrap_reps": 1000
+  },
+  "claim_boundary": "This benchmark tests whether Domamutzer-specific feature families add signal for historical friendship link ranking. It is not causal evidence that showing a recommendation creates a new reciprocal relationship.",
+  "results": [
+    {
+      "dataset": "Romania",
+      "nodes": 41773,
+      "edges": 125826,
+      "context_edges": 100662,
+      "model_positive_edges": 12000,
+      "test_positive_edges": 12582,
+      "binary": {
+        "baseline_learned": {
+          "auc": 0.86432818,
+          "ap": 0.9087694707833862
+        },
+        "domamutzer_augmented": {
+          "auc": 0.86441746,
+          "ap": 0.9088118441613205
+        },
+        "domamutzer_no_rarity": {
+          "auc": 0.8644151,
+          "ap": 0.9088140453959047
+        },
+        "domamutzer_no_reciprocal": {
+          "auc": 0.8643971,
+          "ap": 0.9088033365280482
+        }
+      },
+      "ranking": {
+        "baseline_learned": {
+          "mrr": 0.08574061417154062,
+          "hit10": 0.20333333333333334,
+          "ndcg10": 0.09412651305407285
+        },
+        "domamutzer_augmented": {
+          "mrr": 0.08386983048529292,
+          "hit10": 0.20833333333333334,
+          "ndcg10": 0.0941776331555381
+        },
+        "domamutzer_no_rarity": {
+          "mrr": 0.08619544786532345,
+          "hit10": 0.20666666666666667,
+          "ndcg10": 0.0954142985115418
+        },
+        "domamutzer_no_reciprocal": {
+          "mrr": 0.08639465560790445,
+          "hit10": 0.21,
+          "ndcg10": 0.09648545931794651
+        },
+        "query_count": 600,
+        "paired_ndcg10_delta": 5.11201014652494e-05,
+        "paired_ndcg10_ci95": [
+          -0.006451255082121152,
+          0.006024413086078021
+        ]
+      },
+      "weights": {
+        "baseline_learned": {
+          "intercept": -0.010275896675702407,
+          "features": {
+            "taste_cosine": 0.023588911273707183,
+            "graph_jaccard": -0.4428635830432575,
+            "adamic_adar": -0.5799246316718121,
+            "preferential_attachment": 0.10559068325637946,
+            "degree_ratio": 0.08710804533265283
+          }
+        },
+        "domamutzer_augmented": {
+          "intercept": -0.01027300573374909,
+          "features": {
+            "taste_cosine": 0.013723449168342622,
+            "rarity_overlap": 0.01372104393653792,
+            "reciprocal_coverage": 0.010608250049383195,
+            "shared_evidence": -0.0013126758496315473,
+            "graph_jaccard": -0.44283732472539644,
+            "adamic_adar": -0.5798992188784581,
+            "preferential_attachment": 0.10543184950997081,
+            "degree_ratio": 0.08701758396880231
+          }
+        },
+        "domamutzer_no_rarity": {
+          "intercept": -0.01027783342860696,
+          "features": {
+            "taste_cosine": 0.01723900241436823,
+            "reciprocal_coverage": 0.014875764699302466,
+            "shared_evidence": -8.452077582459558e-05,
+            "graph_jaccard": -0.44284561583819854,
+            "adamic_adar": -0.5799057667858663,
+            "preferential_attachment": 0.10546615205191402,
+            "degree_ratio": 0.08702101599023203
+          }
+        },
+        "domamutzer_no_reciprocal": {
+          "intercept": -0.01027408260599668,
+          "features": {
+            "taste_cosine": 0.01688596054170604,
+            "rarity_overlap": 0.017210206090972933,
+            "shared_evidence": 0.0003010806192611903,
+            "graph_jaccard": -0.4428371183829651,
+            "adamic_adar": -0.5799037161500507,
+            "preferential_attachment": 0.10546850354107343,
+            "degree_ratio": 0.08704284512685316
+          }
+        }
+      }
+    },
+    {
+      "dataset": "Croatia",
+      "nodes": 54573,
+      "edges": 498202,
+      "context_edges": 398562,
+      "model_positive_edges": 12000,
+      "test_positive_edges": 49820,
+      "binary": {
+        "baseline_learned": {
+          "auc": 0.6688959,
+          "ap": 0.6427098274803307
+        },
+        "domamutzer_augmented": {
+          "auc": 0.66833968,
+          "ap": 0.6409045985354905
+        },
+        "domamutzer_no_rarity": {
+          "auc": 0.66847728,
+          "ap": 0.6411834154672984
+        },
+        "domamutzer_no_reciprocal": {
+          "auc": 0.66856972,
+          "ap": 0.6413307239723904
+        }
+      },
+      "ranking": {
+        "baseline_learned": {
+          "mrr": 0.0664633832058948,
+          "hit10": 0.13333333333333333,
+          "ndcg10": 0.06323330230926473
+        },
+        "domamutzer_augmented": {
+          "mrr": 0.06742648813243395,
+          "hit10": 0.135,
+          "ndcg10": 0.06458421977881226
+        },
+        "domamutzer_no_rarity": {
+          "mrr": 0.0671244484913534,
+          "hit10": 0.13666666666666666,
+          "ndcg10": 0.06487514300603908
+        },
+        "domamutzer_no_reciprocal": {
+          "mrr": 0.06699310197557092,
+          "hit10": 0.13666666666666666,
+          "ndcg10": 0.06470003120512656
+        },
+        "query_count": 600,
+        "paired_ndcg10_delta": 0.0013509174695475216,
+        "paired_ndcg10_ci95": [
+          -0.0040873647538518625,
+          0.007137898060536602
+        ]
+      },
+      "weights": {
+        "baseline_learned": {
+          "intercept": -0.001776591487768008,
+          "features": {
+            "taste_cosine": 0.037808793455027336,
+            "graph_jaccard": -0.09176959737886003,
+            "adamic_adar": 0.09312179493078968,
+            "preferential_attachment": 0.27831436665612247,
+            "degree_ratio": 0.17853405857080273
+          }
+        },
+        "domamutzer_augmented": {
+          "intercept": -0.001776153006797934,
+          "features": {
+            "taste_cosine": 0.016649134122172702,
+            "rarity_overlap": 0.017608208491664307,
+            "reciprocal_coverage": 0.0180070701055961,
+            "shared_evidence": 0.02159343664082759,
+            "graph_jaccard": -0.09194642133981339,
+            "adamic_adar": 0.09257510391968359,
+            "preferential_attachment": 0.277713687953371,
+            "degree_ratio": 0.17828720374568233
+          }
+        },
+        "domamutzer_no_rarity": {
+          "intercept": -0.001780024707292026,
+          "features": {
+            "taste_cosine": 0.021660018002921538,
+            "reciprocal_coverage": 0.024120974920041154,
+            "shared_evidence": 0.023300391056075932,
+            "graph_jaccard": -0.09189906698748819,
+            "adamic_adar": 0.09266191534832412,
+            "preferential_attachment": 0.2777460753809556,
+            "degree_ratio": 0.17830040789106524
+          }
+        },
+        "domamutzer_no_reciprocal": {
+          "intercept": -0.001779112879973601,
+          "features": {
+            "taste_cosine": 0.022306558567164146,
+            "rarity_overlap": 0.023882224966678297,
+            "shared_evidence": 0.024499358131076617,
+            "graph_jaccard": -0.0918928894488552,
+            "adamic_adar": 0.09269239961875135,
+            "preferential_attachment": 0.27779898785457663,
+            "degree_ratio": 0.17831284354738391
+          }
+        }
+      }
+    },
+    {
+      "dataset": "Hungary",
+      "nodes": 47538,
+      "edges": 222887,
+      "context_edges": 178311,
+      "model_positive_edges": 12000,
+      "test_positive_edges": 22288,
+      "binary": {
+        "baseline_learned": {
+          "auc": 0.76046196,
+          "ap": 0.8240088043893627
+        },
+        "domamutzer_augmented": {
+          "auc": 0.7600517,
+          "ap": 0.8225269007071525
+        },
+        "domamutzer_no_rarity": {
+          "auc": 0.76012538,
+          "ap": 0.8229882652395436
+        },
+        "domamutzer_no_reciprocal": {
+          "auc": 0.7601681,
+          "ap": 0.8229719075929203
+        }
+      },
+      "ranking": {
+        "baseline_learned": {
+          "mrr": 0.09397187034474506,
+          "hit10": 0.20166666666666666,
+          "ndcg10": 0.10165833135995879
+        },
+        "domamutzer_augmented": {
+          "mrr": 0.09840199383352077,
+          "hit10": 0.21166666666666667,
+          "ndcg10": 0.1081584766164462
+        },
+        "domamutzer_no_rarity": {
+          "mrr": 0.09671906610249206,
+          "hit10": 0.20833333333333334,
+          "ndcg10": 0.105708138491738
+        },
+        "domamutzer_no_reciprocal": {
+          "mrr": 0.09698354381198758,
+          "hit10": 0.21333333333333335,
+          "ndcg10": 0.10746668070343034
+        },
+        "query_count": 600,
+        "paired_ndcg10_delta": 0.006500145256487384,
+        "paired_ndcg10_ci95": [
+          0.0009579400845636668,
+          0.012181780033867693
+        ]
+      },
+      "weights": {
+        "baseline_learned": {
+          "intercept": -0.003927923596395903,
+          "features": {
+            "taste_cosine": 0.03462136610344341,
+            "graph_jaccard": -0.29124862110934674,
+            "adamic_adar": -0.32071492549111785,
+            "preferential_attachment": 0.13425323403928754,
+            "degree_ratio": 0.1355381050301357
+          }
+        },
+        "domamutzer_augmented": {
+          "intercept": -0.0039061955693685956,
+          "features": {
+            "taste_cosine": 0.01766309073608609,
+            "rarity_overlap": 0.020230453974607515,
+            "reciprocal_coverage": 0.01910532144033583,
+            "shared_evidence": 0.002133338564785931,
+            "graph_jaccard": -0.2912071520270622,
+            "adamic_adar": -0.32069713244019415,
+            "preferential_attachment": 0.13391554415033444,
+            "degree_ratio": 0.1356195649528832
+          }
+        },
+        "domamutzer_no_rarity": {
+          "intercept": -0.003915104262005669,
+          "features": {
+            "taste_cosine": 0.02301468392799187,
+            "reciprocal_coverage": 0.025591109906793023,
+            "shared_evidence": 0.0037474163998507965,
+            "graph_jaccard": -0.29120182216867446,
+            "adamic_adar": -0.3206846267217733,
+            "preferential_attachment": 0.1339859531331598,
+            "degree_ratio": 0.13552348652357246
+          }
+        },
+        "domamutzer_no_reciprocal": {
+          "intercept": -0.003913830479530598,
+          "features": {
+            "taste_cosine": 0.023298812717478048,
+            "rarity_overlap": 0.026426899712295743,
+            "shared_evidence": 0.004844957871402986,
+            "graph_jaccard": -0.291212050958865,
+            "adamic_adar": -0.32068405447912063,
+            "preferential_attachment": 0.1340219588498316,
+            "degree_ratio": 0.13556992176882265
+          }
+        }
+      }
+    }
+  ]
+}
