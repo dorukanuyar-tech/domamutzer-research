@@ -1,104 +1,88 @@
 # Domamutzer
 
-### Reciprocal people discovery without throwing away the incumbent ranker
+**Reciprocal people-discovery reranking for social platforms.**
 
-Most social discovery systems are good at estimating **who you may already know**. Domamutzer explores a neighboring question:
+Domamutzer studies a question that is different from classic *People You May Know* systems:
 
-> among candidates a platform is already willing to show, which introduction has stronger evidence of being valuable **in both directions**?
+> Among candidates a platform is already willing to show, which introduction has the strongest evidence of being valuable **for both people**?
 
-Domamutzer is an evaluation-stage reciprocal reranking architecture. It does **not** claim to beat Meta, TikTok, Snap, or any production recommender on public proxy data. Its purpose is to make the next experiment—the buyer-controlled directional replay—technically concrete, conservative, and auditable.
+It is designed as a conservative reranking layer on top of an existing candidate generator and incumbent ranker. The public repository contains a dependency-free reference implementation, the core equations, and the external evidence history. Production ingestion, private feature derivation, training infrastructure, security, and serving code are not public.
 
-## Core idea
+## Why reciprocal ranking?
+
+A one-sided people recommender can assign a high score to `A -> B` even when `B -> A` is weak. For introductions, that asymmetry matters. Domamutzer models the two directions separately and combines them only after both have been estimated.
 
 ```mermaid
 flowchart LR
-    A[Existing candidate generator] --> B[Incumbent ranker]
+    A[Candidate generator] --> B[Incumbent ranker]
     B --> C[Candidate set + incumbent score]
-    C --> D1[Directional model A → B]
-    C --> D2[Directional model B → A]
-    D1 --> E[Mutual target]
+    C --> D1[P A→B]
+    C --> D2[P B→A]
+    D1 --> E[Mutual utility]
     D2 --> E
     C --> F[Evidence / support gate]
-    E --> G[Trust-region residual]
+    E --> G[Bounded residual]
     F --> G
     B --> G
-    G --> H[Constrained final rerank]
+    G --> H[Conservative rerank]
 ```
 
-The system intentionally keeps the incumbent score as a prior. When Domamutzer has weak support, it stays near—or exactly at—the incumbent. When both directional evidence and support are strong, it can make a bounded correction.
+## Core policy
 
-## The v4 policy
+Let `s0` be the incumbent platform score, and let `pAB` and `pBA` be directional probabilities. A reciprocal target can be formed with harmonic fusion:
 
-Let:
+$$
+ m(A,B)=\frac{2p_{AB}p_{BA}}{p_{AB}+p_{BA}}.
+$$
 
-- `s0(A,B)` be the incumbent platform score,
-- `pAB = P(A values/accepts B)`,
-- `pBA = P(B values/accepts A)`.
+Domamutzer does **not** replace the incumbent score blindly. It applies a support-gated, bounded correction in log-odds space:
 
-A mutual target can be formed with harmonic fusion:
+$$
+\Delta=\operatorname{clip}\big(\operatorname{logit}(m)-\operatorname{logit}(s_0),-\delta,+\delta\big)
+$$
 
-$$m(A,B)=\frac{2p_{AB}p_{BA}}{p_{AB}+p_{BA}}.$$
+$$
+s=\sigma\big(\operatorname{logit}(s_0)+g\Delta\big), \qquad g\in[0,1].
+$$
 
-Domamutzer then computes an intervention gate `g ∈ [0,1]` from pair support and applies a bounded log-odds move:
+When support is weak (`g = 0`), the output is exactly the incumbent score. `δ` is a trust-region bound that limits how aggressively the reranker can move a candidate.
 
-$$\Delta=\mathrm{clip}(\mathrm{logit}(m)-\mathrm{logit}(s_0),-\delta,+\delta)$$
+More detail: [`docs/ALGORITHM.md`](docs/ALGORITHM.md).
 
-$$s=\sigma(\mathrm{logit}(s_0)+g\Delta).$$
+## Run it in 30 seconds
 
-So `g=0` is an exact incumbent fallback, and `δ` limits how aggressively the reranker can intervene.
-
-See [`docs/ALGORITHM.md`](docs/ALGORITHM.md) for the public specification.
-
-## Run the public reference implementation
-
-No external packages are required.
+No third-party packages are required.
 
 ```bash
 python examples/quickstart.py
 python -m unittest discover -s reference -v
 ```
 
-The runnable reference is in [`reference/domamutzer_reference.py`](reference/domamutzer_reference.py). It demonstrates reciprocal fusion, support gating, trust-region blending, and constrained window reranking. Private ingestion, feature derivation, training, security, and production-serving code are not public.
+The public policy reference is in [`reference/domamutzer_reference.py`](reference/domamutzer_reference.py).
 
-## Evidence history
+## What the public benchmarks actually say
 
-Earlier Domamutzer versions were tested on three families of public social-network proxies. The negative results are retained because they changed the architecture.
+Earlier versions were evaluated on historical attributed social-graph proxies. Those experiments were useful, but they did **not** establish production superiority.
 
-| Evidence | Gate | Result |
+| Dataset family | Outcome | What it taught us |
 |---|---|---|
-| GEMSEC Deezer | AMBER | small mean top-K gains; only Hungary had a clearly positive CI |
-| GitHub social network | RED | fixed added-feature model failed the fresh holdout |
-| Twitch, 6 networks | RED | macro NDCG@10 delta `-0.000828`; 2/6 networks positive |
+| GEMSEC Deezer | Mixed / AMBER | Added features sometimes improved top-K ranking but did not generalize uniformly. |
+| GitHub social graph | RED | A fixed added-feature formulation did not beat the matched baseline on a fresh holdout. |
+| Twitch, 6 networks | RED | Adaptive pairwise selection still failed to produce consistent cross-network lift. |
 
-Those datasets contain historical links and attributes, **not directional recommendation exposures/outcomes**. They cannot answer the actual product question: does showing A to B create a mutually valuable connection?
+These failures motivated the current baseline-first, directional architecture. The historical datasets contain links and attributes, but not the directional recommendation exposures and downstream outcomes required to answer the actual product question.
 
-The frozen evidence is under [`evidence/`](evidence/), with interpretation in [`docs/EVIDENCE_LEDGER.md`](docs/EVIDENCE_LEDGER.md).
+Full evidence notes: [`docs/EVIDENCE.md`](docs/EVIDENCE.md).
 
-## What changed because of the failures
+## The next decision-grade experiment
 
-The project moved away from “add reciprocal/rarity features and hope they generalize.” The current architecture instead uses:
-
-- directional A→B and B→A outcome models,
-- mutual fusion rather than one-sided relevance,
-- baseline-first intervention,
-- evidence/support gating,
-- bounded log-odds movement,
-- optional incumbent-window constrained reranking,
-- IPS / SNIPS / doubly-robust evaluation for biased historical logs,
-- explicit hide/block/report safety guardrails.
-
-This is a **safer evaluation architecture**, not a retroactive claim that the public RED benchmarks became positive.
-
-## Buyer-controlled evaluation
-
-The decision-grade test is a replay or shadow evaluation on a fixed candidate pool with pseudonymous historical data:
+The appropriate next test is a buyer-controlled replay or shadow evaluation on a **fixed candidate pool** using pseudonymous historical recommendation data. Useful labels include:
 
 ```text
 viewer_id
 candidate_id
 incumbent_score
-logging_propensity        # if available / estimated and documented
-permitted pair features
+logging_propensity      # when available / estimable
 impression
 profile_open
 connect_request
@@ -110,30 +94,30 @@ block
 report
 ```
 
-Compare incumbent vs Domamutzer under the same candidate pool. Predeclare primary metrics and safety guardrails before opening the result. See [`docs/BUYER_REPLAY_PROTOCOL.md`](docs/BUYER_REPLAY_PROTOCOL.md).
+The private engine supports directional scoring and off-policy evaluation utilities (IPS, SNIPS, and doubly robust estimation). The public evaluation contract is described in [`docs/EVALUATION_PROTOCOL.md`](docs/EVALUATION_PROTOCOL.md).
 
-## Repository map
+## Repository structure
 
 ```text
-reference/                     runnable public policy reference
-examples/                      tiny executable example
-evidence/                      frozen public proxy results
-docs/ALGORITHM.md              equations and policy semantics
-docs/EVIDENCE_LEDGER.md        what existing experiments prove
-docs/BUYER_REPLAY_PROTOCOL.md  decision-grade next evaluation
+reference/                 runnable public policy reference
+examples/                  minimal executable example
+docs/ALGORITHM.md          equations and policy semantics
+docs/EVIDENCE.md           frozen external evidence history
+docs/EVALUATION_PROTOCOL.md buyer-controlled replay protocol
+.github/workflows/test.yml automatic public-reference test
 ```
+
+## Scope
+
+Domamutzer is an **evaluation-stage research prototype**, not a claim that a public benchmark has beaten Meta, TikTok, Snap, or another production recommender. Its purpose is to make a controlled reciprocal-ranking experiment concrete, auditable, and low-risk to integrate with an incumbent ranking stack.
 
 ## Research context
 
-Domamutzer is informed by reciprocal recommender systems, where both parties' preferences jointly determine success, and by counterfactual/off-policy evaluation for logged recommendation data.
+The design is informed by work on reciprocal recommendation, causal bilateral recommendation, counterfactual evaluation, and two-sided matching markets.
 
-- Yang et al., *Revisiting Reciprocal Recommender Systems: Metrics, Formulation, and Method* (2024): https://arxiv.org/abs/2408.09748
-- Kawamura et al., *Counterfactual Reciprocal Recommender Systems for User-to-User Matching* (2025): https://arxiv.org/abs/2508.01867
-- Palomares et al., *Reciprocal Recommender Systems: Analysis of State-of-Art Literature...* (2020): https://arxiv.org/abs/2007.16120
-
-## Status
-
-**Research/evaluation stage.** The private v4 engine is built for technical replay, not advertised as production-proven. The next meaningful evidence is directional platform data, not another round of tuning on already-open public holdouts.
+- Yang et al., *Revisiting Reciprocal Recommender Systems: Metrics, Formulation, and Method* (KDD 2024)
+- Kawamura et al., *Counterfactual Reciprocal Recommender Systems for User-to-User Matching* (2025)
+- Tomita & Yokoyama, *Fair Reciprocal Recommendation in Matching Markets* (RecSys 2024)
 
 ## Contact
 
